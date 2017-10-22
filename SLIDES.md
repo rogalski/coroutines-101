@@ -27,10 +27,13 @@
 ---
 
 ### Problem statement
-#### Single threaded code
-- single threaded code is easy but often is not enough
-- we want to utilize CPU in more efficient manner
-- two typical cases which
+- single threaded code - easy but often is not enough
+- two typical cases which may be encountered:
+  - CPU core usage at 100%, more processing power needed
+  - CPU cycles wasted on waiting for something (e.g. response from HTTP request)
+
+**We want to utilize CPU in more efficient manner**
+
 ---
 #### Parallelism vs concurrency
 
@@ -93,26 +96,152 @@ What we'll focus on:
 
 ---
 
-#### Generators and coroutines
-Different in terms of usage
-- generators are _producers of data_
-- coroutines are _consumers_ of data
+### Generators and coroutines
+#### Generators
+- Intuitive interpretation of generator - to produce value on demand
+- `generator.next()` (Python 2.x) / `generator.__next__()` (Python 3.x)
+- "Hello world!" for generators - Fibonacci sequence
 
+```python
+def fib():
+    """Infinite Fibonacci generator, starts at 0"""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+```
+
+---
+
+#### "Those weird generator methods"
+
+###### [`generator.close()`](https://docs.python.org/3/reference/expressions.html#generator.close)
+- used to clean-up any resources used within generator
+- called by garbage collector
+- may be caught in coroutine, but only valid action is to re-raise, otherwise  `RuntimeError: generator ignored GeneratorExit` is raised
+- [sometimes it's not that obvious](https://stackoverflow.com/questions/44005817)
+
+---
+
+###### `generator.throw(type, value=None, traceback=None)`(https://docs.python.org/3/reference/expressions.html#generator.send)
+- raises exception _from within generator_
+```pythonstub
+def fib():
+    """Infinite Fibonacci generator, starts at 0"""
+    a, b = 0, 1
+    while True:
+        yield a  # thrown exception origins from here (see stacktrace)
+        a, b = b, a + b
+
+
+def print_fib_throw_after(n):
+    fib_instance = fib()
+    for i in range(n):
+        fib_number = next(fib_instance)
+        print(fib_number)
+        if fib_number == n:
+            fib_instance.throw(Exception, Exception("I don't like {0}".format(n)))
+```
+
+---
+
+Stacktrace:
+```
+Traceback (most recent call last):
+  File "/Users/rogalski/Repo/coroutines-101/code/03_gen_throw.py", line 19, in <module>
+    print_fib_throw_after(89)
+  File "/Users/rogalski/Repo/coroutines-101/code/03_gen_throw.py", line 15, in print_fib_throw_after
+    fib_instance.throw(Exception, Exception("I don't like {0}".format(n)))
+  File "/Users/rogalski/Repo/coroutines-101/code/03_gen_throw.py", line 5, in fib
+    yield a  # thrown exception origins from here (see stacktrace)
+Exception: I don't like 89
+```
+
+- Note that we established a form of "IPC" between caller and coroutine.
+- We'll get back to it in the minute
+
+---
+
+###### [`generator.send(val)`](https://docs.python.org/3/reference/expressions.html#generator.send)
+- most frequently misunderstood feature of "generators/coroutines"
+- a lot of misleading examples over the Web 
+- ~~changing yield values of running generators~~ (?)
+- **consuming** values (!)
+
+--- 
+
+#### Generators vs. coroutines
 Similar in terms of how they work:
 - they _receive_ and _give away_ control flow from/to another code
 - state is kept when generator/coroutine is re-entered
 
+Different in terms of usage:
+- generators are _producers_ of data
+- coroutines are _consumers_ of data
+
+How to "switch" thinking from generators to coroutines 
+- generator is a coroutine where consumed value is thrown away
+- response in generator depends only on internal state of coroutine 
+
 ---
 
-### Code snippets
-[TBD]
+### First coroutine
+```python
+from __future__ import print_function
+
+
+def my_coroutine(multiplier):
+    print("my_coroutine started with multiplier", multiplier)
+    received = []
+    while True:
+        value_to_produce = ''.join(multiplier * char for char in received)
+        print('my_coroutine will produce', repr(value_to_produce))
+        data_received = yield value_to_produce
+        print('my_coroutine received', repr(data_received))
+        received.append(data_received)
+
+
+def main():
+    coro = my_coroutine(multiplier=2)
+    # "start" coroutine by sending None to it (or calling next(coro))
+    # produced value typically does not make sense
+    # usually is thrown away
+    coro.send(None)
+
+    for char in "ABC":
+        print('main sends to coroutine', repr(char))
+        received = coro.send(char)
+        print('main received from coroutine', repr(received))
+
+
+if __name__ == "__main__":
+    main()
+```
+
+--- 
+
+### What we can see?
+- running coroutine keeps it's state when re-entered
+- context-switching occurs in precisely defined places (`yield` statements)
+- produced values depends both on coroutine state (arguments, local namespace) and sent value
 
 ---
+### Event loop
+Interpretation: "main", schedules and triggers execution of coroutines.
+
+Different terminologies:
+- event loop
+- trampoline function
+- scheduler
+- ...
 
 ### Summary
 #### What we’ve learned
-- coroutines as simple way for solving IO-bound problems
-- they are run concurrently, only one coroutine runs at single point of time
+- coroutines as simple way for solving IO-bound / network-bound problems
+- they are run concurrently, only one coroutine is active at single point of time
+- places where context-switching occurs are well defined 
+- scheduler code is responsible for triggering all coroutines
+- coroutines runs part of their functionality, reschedules themselves in scheduler and yields execution
 
 #### Learn more
 ##### Computer Science terms
@@ -126,7 +255,7 @@ Similar in terms of how they work:
   - `stackless`
 
 Different implementations will expose different APIs, use different names etc.
-However, in principle, all of them use same concept of coroutines.
+However, in principle, all of them use same concepts.
 
 ##### Resources
 - [David Beazley - A Curious Course on Coroutines and Concurrency (PyCon 2009)](http://www.dabeaz.com/coroutines/Coroutines.pdf)
