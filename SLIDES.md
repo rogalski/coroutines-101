@@ -1,6 +1,6 @@
 ![](./pygda.png)
 # Coroutines 101
-## Lukasz Rogalski
+## Łukasz Rogalski
 
 ---
 
@@ -19,6 +19,8 @@
 - I wanted to figure out _new hot thing_ -  `asyncio`
 - I eventually learned that it’s just a one of implementations of more basic concept of _coroutines_.
 - **Let’s learn how to walk before running**
+
+---
 
 #### Disclaimer
 - I’m not a pro
@@ -62,16 +64,18 @@ From Wiki:
 ---
 #### Basic properties
 - lightweight
-- only one coroutine runs at the single point in time (GIL is not an problem!)
+- only one coroutine runs at the single point in time (GIL is not an problem)
+
+---
 
 #### Where coroutines shine?
-IO-bound, network-bound problems!
+IO-bound, network-bound problems
 
-- We do not use 100% of CPU (we _sleep a lot_ waiting for a response).
-- In blocking code we waste a lot of cpu cycles.
+- We do not use 100% of CPU (we _sleep a lot_ waiting for a response)
+- In blocking code we waste a lot of cpu cycles
 - We have spare cpu cycles - why not use them to handle more requests _concurrently_?
 
-Coroutines helps us with exactly that.
+Coroutines helps us with exactly that
 
 ---
 
@@ -82,13 +86,17 @@ Coroutines helps us with exactly that.
 [PEP 342 — Coroutines via Enhanced Generators](https://www.python.org/dev/peps/pep-0342/) (Python 2.5)
 > (…) if it were possible to pass values or exceptions into a generator at the point where it was suspended, a simple co-routine scheduler or trampoline function would let coroutines call each other without blocking -- a tremendous boon for asynchronous applications
 
+---
+
 [PEP 380 — Syntax for Delegating to a Subgenerator](https://www.python.org/dev/peps/pep-0380/) (Python 3.3)
 > (…) if the subgenerator is to interact properly with the caller in the case of calls to `send()`, `throw()` and `close()`, things become considerably more difficult. (…) the necessary code is very complicated, and it is tricky to handle all the corner cases correctly. (…) The following new expression syntax will be allowed in the body of a generator: `yield from <expr>`
 
 ---
 
- [PEP 492 -- Coroutines with async and await syntax](https://www.python.org/dev/peps/pep-0492/) (Py 3.5)
+ [PEP 492 -- Coroutines with async and await syntax](https://www.python.org/dev/peps/pep-0492/) (Python 3.5)
 > This proposal makes coroutines a native Python language feature, and clearly separates them from generators. This removes generator/coroutine ambiguity, and makes it possible to reliably define coroutines without reliance on a specific library. This also enables linters and IDEs to improve static code analysis and refactoring.
+
+---
 
 What we'll focus on:
 - [PEP 255 — Simple Generators](https://www.python.org/dev/peps/pep-0255/) (Python 2.2)
@@ -115,7 +123,7 @@ def fib():
 
 #### "Those weird generator methods"
 
-###### [`generator.close()`](https://docs.python.org/3/reference/expressions.html#generator.close)
+##### [`generator.close()`](https://docs.python.org/3/reference/expressions.html#generator.close)
 - used to clean-up any resources used within generator
 - called by garbage collector
 - may be caught in coroutine, but only valid action is to re-raise, otherwise  `RuntimeError: generator ignored GeneratorExit` is raised
@@ -123,9 +131,10 @@ def fib():
 
 ---
 
-###### `generator.throw(type, value=None, traceback=None)`(https://docs.python.org/3/reference/expressions.html#generator.send)
-- raises exception _from within generator_
-```pythonstub
+##### [`generator.throw(type, value=None, traceback=None)`](https://docs.python.org/3/reference/expressions.html#generator.send)
+`throw` raises exception as it if would be raised _from within generator_
+
+```python
 def fib():
     """Infinite Fibonacci generator, starts at 0"""
     a, b = 0, 1
@@ -146,6 +155,7 @@ def print_fib_throw_after(n):
 ---
 
 Stacktrace:
+
 ```
 Traceback (most recent call last):
   File "/Users/rogalski/Repo/coroutines-101/code/03_gen_throw.py", line 19, in <module>
@@ -157,31 +167,31 @@ Traceback (most recent call last):
 Exception: I don't like 89
 ```
 
-- Note that we established a form of "IPC" between caller and coroutine.
+- Note that we established a form of communication channel between caller and coroutine
 - We'll get back to it in the minute
 
 ---
 
-###### [`generator.send(val)`](https://docs.python.org/3/reference/expressions.html#generator.send)
-- most frequently misunderstood feature of "generators/coroutines"
-- a lot of misleading examples over the Web 
+##### [`generator.send(val)`](https://docs.python.org/3/reference/expressions.html#generator.send)
+- most frequently misunderstood feature of generators
+- a lot of misleading examples over the Web
 - ~~changing yield values of running generators~~ (?)
 - **consuming** values (!)
 
---- 
+---
 
 #### Generators vs. coroutines
-Similar in terms of how they work:
+##### Similar in terms of how they work:
 - they _receive_ and _give away_ control flow from/to another code
 - state is kept when generator/coroutine is re-entered
 
-Different in terms of usage:
+##### Different in terms of usage:
 - generators are _producers_ of data
 - coroutines are _consumers_ of data
 
-How to "switch" thinking from generators to coroutines 
+##### Relation between generators and coroutines
 - generator is a coroutine where consumed value is thrown away
-- response in generator depends only on internal state of coroutine 
+- response in generator depends only on internal state of coroutine
 
 ---
 
@@ -203,10 +213,7 @@ def my_coroutine(multiplier):
 
 def main():
     coro = my_coroutine(multiplier=2)
-    # "start" coroutine by sending None to it (or calling next(coro))
-    # produced value typically does not make sense
-    # usually is thrown away
-    coro.send(None)
+    coro.send(None)  # "start" coroutine by sending None to it
 
     for char in "ABC":
         print('main sends to coroutine', repr(char))
@@ -218,7 +225,7 @@ if __name__ == "__main__":
     main()
 ```
 
---- 
+---
 
 ### What we can see?
 - running coroutine keeps it's state when re-entered
@@ -226,6 +233,7 @@ if __name__ == "__main__":
 - produced values depends both on coroutine state (arguments, local namespace) and sent value
 
 ---
+
 ### Event loop
 Interpretation: "main", schedules and triggers execution of coroutines.
 
@@ -235,20 +243,24 @@ Different terminologies:
 - scheduler
 - ...
 
-### Summary
+---
+
+## Summary
 #### What we’ve learned
 - coroutines as simple way for solving IO-bound / network-bound problems
 - they are run concurrently, only one coroutine is active at single point of time
-- places where context-switching occurs are well defined 
+- places where context-switching occurs are well defined
 - scheduler code is responsible for triggering all coroutines
 - coroutines runs part of their functionality, reschedules themselves in scheduler and yields execution
 
-#### Learn more
-##### Computer Science terms
+---
+
+## Learn more
+#### Computer Science terms
  - coroutines
  - fibers
 
-##### Python implementations:
+#### Python implementations:
   - `tornado`
   - `gevent`
   - ` asyncio`, `tulip`, `trollius`
@@ -257,13 +269,15 @@ Different terminologies:
 Different implementations will expose different APIs, use different names etc.
 However, in principle, all of them use same concepts.
 
-##### Resources
+---
+
+## Resources
 - [David Beazley - A Curious Course on Coroutines and Concurrency (PyCon 2009)](http://www.dabeaz.com/coroutines/Coroutines.pdf)
 - [Łukasz Langa - Thinking in coroutines (PyCon 2016)](https://www.youtube.com/watch?v=l4Nn-y9ktd4)
 
 ---
 
-# Thank you!
+## Thank you!
 - Slides: https://github.com/rogalski/coroutines-101
 - My LinkedIn: https://www.linkedin.com/in/lukasz-rogalski/
 
