@@ -1,4 +1,4 @@
-![](./pygda.png)
+![](assets/pygda.png)
 # Coroutines 101
 ## Łukasz Rogalski
 
@@ -8,7 +8,7 @@
 1. Problem statement
 2. Coroutines
 3. Coroutines in Python
-4. Code snippets
+4. Event loops
 5. Summary
 6. Q&A
 
@@ -242,6 +242,62 @@ Different terminologies:
 - trampoline function
 - scheduler
 - ...
+
+---
+
+- no "built-in" implementation (unless you treat `asyncio` as one)
+- still, there are some core functionalities which event loop or scheduler should provide
+
+---
+
+### Access to kernel-provided event mechanism
+
+##### asyncio
+> class `asyncio.SelectorEventLoop`
+> Event loop based on the selectors module. Subclass of `AbstractEventLoop`.
+>
+> Use the most efficient selector available on the platform.
+>
+> On Windows, only sockets are supported (ex: pipes are not supported): see the MSDN documentation of select.
+
+--- 
+
+##### tornado
+```python
+class IOLoop(Configurable):
+    """A level-triggered I/O loop.
+
+    We use ``epoll`` (Linux) or ``kqueue`` (BSD and Mac OS X) if they
+    are available, or else we fall back on select(). If you are
+    implementing a system that needs to handle thousands of
+    simultaneous connections, you should use a system that supports
+    either ``epoll`` or ``kqueue``.
+```
+
+---
+
+##### gevent
+...
+
+---
+
+### Access to kernel-provided event mechanism
+- essential for networking high performance
+
+---
+
+##### Time awareness
+- tornado: call at
+- asyncio: 
+
+---
+##### Time awareness
+- quite typical
+- e.g. timeouts
+
+---
+
+[![](assets/tulip_coro.png)](https://docs.python.org/3/library/asyncio-task.html#example-chain-coroutines)
 
 ---
 
