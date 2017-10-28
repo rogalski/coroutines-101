@@ -43,7 +43,7 @@
 **We want to utilize CPU in more efficient manner**
 
 ---
-#### [Parallelism vs concurrency](https://stackoverflow.com/questions/1050222/concurrency-vs-parallelism-what-is-the-difference)
+#### [Concurrency vs parallelism](https://stackoverflow.com/questions/1050222/concurrency-vs-parallelism-what-is-the-difference)
 
 > Concurrency is about dealing with lots of things at once. Parallelism is about doing lots of things at once.
 
