@@ -47,20 +47,7 @@
 
 > Concurrency is about dealing with lots of things at once. Parallelism is about doing lots of things at once.
 
-//TBD: best visualisation
-##### Parallelism
-```
-    /------------\
----/ ------------ \--->
-                     t
-```
-
-##### Concurrency
-```
-    /--   -    --\
----/   --- ----   \--->
-                     t
-```
+![Concurrent and parallel - comparison](./assets/concurrrent_and_parallel.svg)
 
 ---
 
@@ -177,7 +164,7 @@ Exception: I don't like 89
 ```
 
 - Note that we established a form of communication channel between caller and coroutine
-- We may catch this exception form within a coroutine and act on it accordingly
+- We may catch this exception within a coroutine and act on it accordingly
 - **We can affect running coroutine from outside world**
 
 ---
@@ -224,15 +211,10 @@ def my_coroutine(multiplier):
 def main():
     coro = my_coroutine(multiplier=2)
     coro.send(None)  # "start" coroutine by sending None to it
-
     for char in "ABC":
         print('main sends to coroutine', repr(char))
         received = coro.send(char)
         print('main received from coroutine', repr(received))
-
-
-if __name__ == "__main__":
-    main()
 ```
 
 ---
