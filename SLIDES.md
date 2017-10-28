@@ -260,15 +260,13 @@ Different terminologies:
 
 ---
 
-### Access to kernel-provided event mechanism
+### Access to kernel-provided events
 
 ##### asyncio
 > class `asyncio.SelectorEventLoop`
 > Event loop based on the selectors module. Subclass of `AbstractEventLoop`.
 >
 > Use the most efficient selector available on the platform.
->
-> On Windows, only sockets are supported (ex: pipes are not supported): see the MSDN documentation of select.
 
 [Classes hierarchy](https://docs.python.org/3/library/selectors.html#module-selectors):
 ```
@@ -280,7 +278,7 @@ BaseSelector
 +-- KqueueSelector
 ```
 
---- 
+---
 
 ##### [tornado](http://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop)
 ```python
@@ -296,8 +294,8 @@ class IOLoop(Configurable):
 
 ---
 
-### Access to kernel-provided event mechanism
-- `epool` (linux kernel) / `kqueue` (BSD kernel) - `select`-like, but better in terms of efficiency
+### Access to kernel-provided events
+- `epoll` (linux kernel) / `kqueue` (BSD kernel) - `select`-like, but better in terms of efficiency
 - allows to avoid using busy loops
 - essential for networking high performance
 
@@ -306,21 +304,20 @@ class IOLoop(Configurable):
 ### Time awareness
 ##### [asyncio: delayed calls](https://docs.python.org/3/library/asyncio-eventloop.html#delayed-calls)
 
-> The event loop has its own internal clock for computing timeouts. Which clock is used depends on the (platform-specific) event loop implementation; **ideally it is a monotonic clock**. This will generally be a different clock than `time.time()`.
+> The event loop has its own internal clock for computing timeouts. (...) **ideally it is a monotonic clock**
 
 > `AbstractEventLoop.call_later(delay, callback, *args)`
 > 
 > Arrange for the callback to be called after the given delay seconds (either an int or float).
 
 > `AbstractEventLoop.call_at(when, callback, *args)`
+>
 > Arrange for the callback to be called at the given absolute timestamp when (an int or float), using the same time reference as AbstractEventLoop.time().
-
-> `AbstractEventLoop.time()`
-> Return the current time, as a float value, according to the event loop’s internal clock.
 
 ---
 ##### tornado
 > `IOLoop.add_timeout(deadline, callback, *args, **kwargs)`
+>
 > Runs the callback at the time deadline from the I/O loop.
 
 > `IOLoop.call_later(delay, callback, *args, **kwargs)`
