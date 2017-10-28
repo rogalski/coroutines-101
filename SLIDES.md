@@ -15,10 +15,16 @@
 ---
 
 ### Backstory
-#### Why this talk?
+#### Why I prepared this talk?
 - I wanted to figure out _new hot thing_ -  `asyncio`
+- Preparing a talk seemed a good way to keep myself motivated and making sure I understand topic well enough to explain it
 - I eventually learned that it’s just a one of implementations of more basic concept of _coroutines_.
 - **Let’s learn how to walk before running**
+
+#### What can you expect from this talk?
+- ~~Being prepared to write production-ready code right away~~
+- Understanding basic concepts
+- Knowing what to google if you want to start using it
 
 ---
 
@@ -29,7 +35,7 @@
 ---
 
 ### Problem statement
-- single threaded code - easy but often is not enough
+- single threaded code - easy to implement and to reason about, but often is not enough
 - two typical cases which may be encountered:
   - CPU core usage at 100%, more processing power needed
   - CPU cycles wasted on waiting for something (e.g. response from HTTP request)
@@ -37,8 +43,11 @@
 **We want to utilize CPU in more efficient manner**
 
 ---
-#### Parallelism vs concurrency
+#### [Parallelism vs concurrency](https://stackoverflow.com/questions/1050222/concurrency-vs-parallelism-what-is-the-difference)
 
+> Concurrency is about dealing with lots of things at once. Parallelism is about doing lots of things at once.
+
+//TBD: best visualisation
 ##### Parallelism
 ```
     /------------\
@@ -59,7 +68,7 @@
 #### Definition
 From Wiki:
 
->Coroutines are computer-program components that generalize subroutines for non-preemptive multitasking, by allowing multiple entry points for suspending and resuming execution at certain locations. Coroutines are well-suited for implementing familiar program components such as cooperative tasks, exceptions, event loops, iterators, infinite lists and pipes.
+>Coroutines are computer-program components that generalize subroutines for **non-preemptive** **multitasking**, by allowing **multiple entry points for suspending and resuming execution** at certain locations. Coroutines are **well-suited** for implementing familiar program components such as cooperative tasks, exceptions, event loops, iterators, infinite lists and pipes.
 
 ---
 #### Basic properties
@@ -69,32 +78,32 @@ From Wiki:
 ---
 
 #### Where coroutines shine?
-IO-bound, network-bound problems
+IO-bound, network-bound problems.
 
 - We do not use 100% of CPU (we _sleep a lot_ waiting for a response)
 - In blocking code we waste a lot of cpu cycles
 - We have spare cpu cycles - why not use them to handle more requests _concurrently_?
 
-Coroutines helps us with exactly that
+Coroutines helps us with that.
 
 ---
 
 ### Coroutines in Python
 #### History
-[PEP 255 — Simple Generators](https://www.python.org/dev/peps/pep-0255/) (Python 2.2)
+[PEP 255 — Simple Generators](https://www.python.org/dev/peps/pep-0255/) (2001, Python 2.2)
 
-[PEP 342 — Coroutines via Enhanced Generators](https://www.python.org/dev/peps/pep-0342/) (Python 2.5)
+[PEP 342 — Coroutines via Enhanced Generators](https://www.python.org/dev/peps/pep-0342/) (2005, Python 2.5)
 > (…) if it were possible to pass values or exceptions into a generator at the point where it was suspended, a simple co-routine scheduler or trampoline function would let coroutines call each other without blocking -- a tremendous boon for asynchronous applications
 
 ---
 
-[PEP 380 — Syntax for Delegating to a Subgenerator](https://www.python.org/dev/peps/pep-0380/) (Python 3.3)
+[PEP 380 — Syntax for Delegating to a Subgenerator](https://www.python.org/dev/peps/pep-0380/) (2009, Python 3.3)
 > (…) if the subgenerator is to interact properly with the caller in the case of calls to `send()`, `throw()` and `close()`, things become considerably more difficult. (…) the necessary code is very complicated, and it is tricky to handle all the corner cases correctly. (…) The following new expression syntax will be allowed in the body of a generator: `yield from <expr>`
 
 ---
 
- [PEP 492 -- Coroutines with async and await syntax](https://www.python.org/dev/peps/pep-0492/) (Python 3.5)
-> This proposal makes coroutines a native Python language feature, and clearly separates them from generators. This removes generator/coroutine ambiguity, and makes it possible to reliably define coroutines without reliance on a specific library. This also enables linters and IDEs to improve static code analysis and refactoring.
+ [PEP 492 -- Coroutines with async and await syntax](https://www.python.org/dev/peps/pep-0492/) (2015, Python 3.5)
+> This proposal makes **coroutines a native Python language feature**, and clearly separates them from generators. This removes generator/coroutine ambiguity, and makes it possible to reliably define coroutines without reliance on a specific library. This also enables linters and IDEs to improve static code analysis and refactoring.
 
 ---
 
@@ -168,7 +177,8 @@ Exception: I don't like 89
 ```
 
 - Note that we established a form of communication channel between caller and coroutine
-- We'll get back to it in the minute
+- We may catch this exception form within a coroutine and act on it accordingly
+- **We can affect running coroutine from outside world**
 
 ---
 
@@ -246,7 +256,7 @@ Different terminologies:
 ---
 
 - no "built-in" implementation (unless you treat `asyncio` as one)
-- still, there are some core functionalities which event loop or scheduler should provide
+- still, there is core functionality which event loop should provide
 
 ---
 
@@ -260,9 +270,19 @@ Different terminologies:
 >
 > On Windows, only sockets are supported (ex: pipes are not supported): see the MSDN documentation of select.
 
+[Classes hierarchy](https://docs.python.org/3/library/selectors.html#module-selectors):
+```
+BaseSelector
++-- SelectSelector
++-- PollSelector
++-- EpollSelector
++-- DevpollSelector
++-- KqueueSelector
+```
+
 --- 
 
-##### tornado
+##### [tornado](http://www.tornadoweb.org/en/stable/ioloop.html#tornado.ioloop.IOLoop)
 ```python
 class IOLoop(Configurable):
     """A level-triggered I/O loop.
@@ -276,26 +296,46 @@ class IOLoop(Configurable):
 
 ---
 
-##### gevent
-...
-
----
-
 ### Access to kernel-provided event mechanism
+- `epool` (linux kernel) / `kqueue` (BSD kernel) - `select`-like, but better in terms of efficiency
+- allows to avoid using busy loops
 - essential for networking high performance
 
 ---
 
-##### Time awareness
-- tornado: call at
-- asyncio: 
+### Time awareness
+##### [asyncio: delayed calls](https://docs.python.org/3/library/asyncio-eventloop.html#delayed-calls)
+
+> The event loop has its own internal clock for computing timeouts. Which clock is used depends on the (platform-specific) event loop implementation; **ideally it is a monotonic clock**. This will generally be a different clock than `time.time()`.
+
+> `AbstractEventLoop.call_later(delay, callback, *args)`
+> 
+> Arrange for the callback to be called after the given delay seconds (either an int or float).
+
+> `AbstractEventLoop.call_at(when, callback, *args)`
+> Arrange for the callback to be called at the given absolute timestamp when (an int or float), using the same time reference as AbstractEventLoop.time().
+
+> `AbstractEventLoop.time()`
+> Return the current time, as a float value, according to the event loop’s internal clock.
 
 ---
-##### Time awareness
-- quite typical
-- e.g. timeouts
+##### tornado
+> `IOLoop.add_timeout(deadline, callback, *args, **kwargs)`
+> Runs the callback at the time deadline from the I/O loop.
+
+> `IOLoop.call_later(delay, callback, *args, **kwargs)`
+>
+> Runs the callback after delay seconds have passed.
+
 
 ---
+### Time awareness
+- common pattern across event loops
+- useful for implementing timeouts
+
+---
+
+### Event loop, many coroutines (asyncio)
 
 [![](assets/tulip_coro.png)](https://docs.python.org/3/library/asyncio-task.html#example-chain-coroutines)
 
@@ -307,7 +347,7 @@ class IOLoop(Configurable):
 - they are run concurrently, only one coroutine is active at single point of time
 - places where context-switching occurs are well defined
 - scheduler code is responsible for triggering all coroutines
-- coroutines runs part of their functionality, reschedules themselves in scheduler and yields execution
+- coroutines runs part of their functionality, reschedules themselves in event loop and yields control
 
 ---
 
